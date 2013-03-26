@@ -1,0 +1,41 @@
+{
+  "name": "level-match-map",
+  "version": "0.1.0",
+  "description": "Index your database objects in the way they will be rendered. Follows the JSON Context matcher pattern. Datasources generated from matchers, then watch for realtime changes.",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mmckegg/contextdb.git"
+  },
+  "dependencies": {
+    "json-filter": "*",
+    "level-live-stream": "~1.1.2",
+    "level-trigger": "~1.1.0"
+  },
+  "peerDependencies": {
+    "level-sublevel": "~4.0.2",
+    "levelup": "~0.6.2"
+  },
+  "devDependencies": {
+    "level-sublevel": "~4.0.2",
+    "levelup": "~0.6.2",
+    "tap": "*",
+    "rimraf": "*"
+  },
+  "keywords": [
+    "realtime",
+    "templates",
+    "data binding",
+    "json",
+    "filter",
+    "match",
+    "leveldb",
+    "levelup",
+    "map"
+  ],
+  "author": "Matt McKegg",
+  "license": "MIT"
+}
