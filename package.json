@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mmckegg/contextdb.git"
+    "url": "https://github.com/mmckegg/level-match-map.git"
   },
   "dependencies": {
     "json-filter": "*",
