@@ -32,13 +32,13 @@ var matchers = [
   { ref: 'post',
     match: {
       type: 'post',
-      id: {$param: 'post_id'}
+      id: {$param: 'postId'}
     }
   },
   { ref: 'post_comment',
     match: {
       type: 'comment',
-      postId: {$param: 'post_id'}
+      postId: {$param: 'postId'}
     }
   }
 ]
@@ -80,26 +80,25 @@ Time to render our page:
 ```js
 
 function getPageContext(postId, cb){
-  var params = { postId: postId }
-  var data = {currentPage: null, comments: []}
+  var context = { postId: postId, currentPage: null, comments: [] }
   matchDb.createMatchStream('post', {
-    params: params, 
+    params: context, 
     tail: false
   }).on('data', function(data){
 
-    data.currentPage = data.value
+    context.currentPage = data.value
 
   }).on('end', function(){
 
-    matchDb.createMatchStream('post', {
-      params: params, 
+    matchDb.createMatchStream('post_comment', {
+      params: context, 
       tail: false
     }).on('data', function(data){
 
-      data.comments.push(data.value)
+      context.comments.push(data.value)
 
     }).on('end', function(){
-      cb(null, data)
+      cb(null, context)
     })
   })
 }
