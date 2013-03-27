@@ -1,4 +1,4 @@
-Match Map for LevelDB
+Match Index for LevelDB
 ===
 
 Index your database objects in the way they will be rendered. Follows the [JSON Context](https://github.com/mmckegg/json-context) [matcher pattern](https://github.com/mmckegg/json-context#matchers) allowing datasources to automatically be generated from matchers, then watch for realtime changes.
@@ -8,7 +8,7 @@ It is used internally by [ContextDB](https://github.com/mmckegg/contextdb) for t
 ## Installation
 
 ```shell
-$ npm install level-match-map
+$ npm install level-match-index
 ```
 
 ## Example
@@ -18,35 +18,31 @@ This module must be used with [LevelUP](https://github.com/rvagg/node-levelup) a
 ```js
 var LevelUp = require('levelup')
 var Sublevel = require('level-sublevel')
-var MatchMap = require('level-match-map')
+var MatchIndex = require('level-match-index')
 
 var db = Sublevel(LevelUp('/tmp/database-name', {
   encoding: 'json' // need to use json encoding for indexing to work
 }))
 ```
 
-Now lets specify some matchers and hook into the database.
+Now lets specify some indexes. Decide what attributes you want to query your objects by, and what attributes to filter by.
 
 ```js
-var matchers = [
-  { ref: 'post',
-    match: {
-      type: 'post',
-      id: {$param: 'postId'}
-    }
+var indexes = [
+  { $name: 'one_post',
+    type: 'post',       // there is nothing special about type or id, any
+    id: {$index: true}  //    attribute may be specified here
   },
-  { ref: 'post_comment',
-    match: {
-      type: 'comment',
-      postId: {$param: 'postId'}
-    }
+  { $name: 'many_comments',
+    type: 'comment',
+    postId: {$index: true}
   }
 ]
 
-var matchDb = MatchMap(db, matchers)
+var matchDb = MatchIndex(db, matchers)
 ```
 
-Now if we put objects into our `db` instance, they will automatically be indexed based on the specified matchers.
+Now if we put objects into our `db` instance, they will automatically be indexed based on above.
 
 ```js
 var post = {
@@ -78,30 +74,29 @@ db.batch([
 Time to render our page:
 
 ```js
-
 function getPageContext(postId, cb){
-  var params = { postId: postId }
-  var result = { currentPage: null, comments: [] }
-  
-  matchDb.createMatchStream('post', {
-    params: params, 
-    tail: false
-  }).on('data', function(data){
 
-    result.currentPage = data.value
+  var result = { currentPage: null, comments: [] }
+
+  matchDb.createMatchStream([
+
+    // we must specify the $name and *all* attributes we marked with $index
+    {$name: 'one_post', id: postId},
+    {$name: 'many_comments', postId: postId}
+
+  ], { tail: false }).on('data', function(data){
+
+    // save the data somewhere useful
+    if (data.value.type === 'post'){
+      result.currentPage = data.value
+    } else if (data.value.type === 'comment'){
+      result.comments.push(data.value)
+    }
 
   }).on('end', function(){
 
-    matchDb.createMatchStream('post_comment', {
-      params: params, 
-      tail: false
-    }).on('data', function(data){
+    cb(null, result)
 
-      result.comments.push(data.value)
-
-    }).on('end', function(){
-      cb(null, result)
-    })
   })
 }
 
@@ -114,36 +109,31 @@ getPageContext('post-1', function(err, result){
 
 ## API
 
-### require('level-match-map')(db, matchers)
+### require('level-match-map')(db, indexes)
 
-Specify a sublevel extended `db` and an array of matchers. An instance of **matchDb** will be returned. 
+Specify a sublevel extended `db` and an array of indexes. An instance of **matchDb** will be returned. 
 
-If the matchers have changed since last time, all objects in `db` will be re-indexed.
+If the indexes have changed since last time, all objects in `db` will be re-indexed.
 
-### matchDb.lookupMatcher(ref)
+### matchDb.lookupIndex($name)
 
-Returns the original matcher object as passed in that matches specified `ref`.
+Returns the original index object as passed in that matches specified `$name`.
 
-### matchDb.createMatcherStream(matcherRef, options)
+### matchDb.createMatchStream(matchers, options)
 
 Returns a [level-live-stream](https://github.com/dominictarr/level-live-stream) emitting a `sync` event when all current data has been emitted. Call `end` to stop receiving realtime updates, or specify `tail: false` in `options` to cause the stream to automatically close once synced.
 
 **Options**:
 
 - **tail**: defaults to true. Whether to close stream once all current data has been emitted or continue to get live updates.
-- **params**: params to be used in query in place of $param in matchers
-- **queryHandler**: instead of specifying params, can also specify a function to handle $query in matchers
 - **deletedSince**: Objects with the key `_deleted: true` are not included in the stream by default. Use deletedSince with ms timestamp to access these.
 
 ### matchDb.forceIndex()
 
 Force the database to re-index all objects. Shouldn't be necessary, as this should happen automatically as needed.
 
-## Matchers
+## Indexes
 
-Matchers can only be specified at initialization, and from then on only referred to by the name specified under `ref`. If a database is later initialized with changed matchers, the database will automatically be re-indexed. 
+Indexes can only be specified at initialization, and from then on only referred to by `$name`. If a database is later initialized with changed indexes, the database will automatically re-index.
 
-The attributes in `match` are checked using [JSON Filter](https://github.com/mmckegg/json-filter) to see if the object should be matched or not. Attributes that are objects with `$param` or `$query` as an attribute will instead be added to the index.
-
-Matchers work best when used with something like [JSON Context](https://github.com/mmckegg/json-filter) to allow automatic building of contexts that can be streamed to the browser for realtime changes.
-
+You can mark as many attributes with {$index: true}, but all must be specified when calling `createMatchStream`. The other attributes are checked using [JSON Filter](https://github.com/mmckegg/json-filter) to see if the object should be included in the index.

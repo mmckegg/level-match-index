@@ -1,5 +1,5 @@
 {
-  "name": "level-match-map",
+  "name": "level-match-index",
   "version": "0.1.0",
   "description": "Index your database objects in the way they will be rendered. Follows the JSON Context matcher pattern. Datasources generated from matchers, then watch for realtime changes.",
   "main": "index.js",
@@ -8,12 +8,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mmckegg/level-match-map.git"
+    "url": "https://github.com/mmckegg/level-match-index.git"
   },
   "dependencies": {
     "json-filter": "*",
     "level-live-stream": "~1.1.2",
-    "level-trigger": "~1.1.0"
     "level-trigger": "~1.1.0",
     "through": "~2.2.7"
   },
