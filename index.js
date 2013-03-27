@@ -1,25 +1,26 @@
 var Trigger = require('level-trigger')
 var LiveStream = require('level-live-stream')
+var MultiStream = require('./multi_stream')
 
 var checkFilter = require('json-filter')
 var hashObject = require('./hash_object')
 
 
-module.exports = function(db, matchers){
+module.exports = function(db, indexes){
   var self = db.sublevel('match-map')
   var matcher = db.sublevel('matched')
 
   db.matchMap = self
 
   // extract params
-  var matcherLookup = {}
-  var matcherParams = {}
-  var matcherHashes = {}
+  var indexLookup = {}
+  var indexParams = {}
+  var indexHashes = {}
 
-  matchers.forEach(function(matcher){
-    matcherLookup[matcher.ref] = matcher
-    matcherParams[matcher.ref] = paramify(matcher.match)
-    matcherHashes[matcher.ref] = hashObject(matcher.match, 'djb2')
+  indexes.forEach(function(index){
+    indexLookup[index.$name] = index
+    indexParams[index.$name] = paramify(index)
+    indexHashes[index.$name] = hashObject(index, 'djb2')
   })
 
   // map trigger
@@ -31,16 +32,19 @@ module.exports = function(db, matchers){
       db.get(id, function(err, value){
         var batch = []
 
-        matchers.forEach(function(matcher){
-          var paramifiedMatch = matcherParams[matcher.ref]
+        indexes.forEach(function(index){
+          var paramifiedMatch = indexParams[index.$name]
           if (checkMatch(value, paramifiedMatch.ensure)){
-            var paramHash = paramHashForObject(value, paramifiedMatch.params)
-            var key = matcherHashes[matcher.ref] + '~' + paramHash + '~'
+
+            var paramHash = hashObjectKeys(value, paramifiedMatch.params)
+            var key = indexHashes[index.$name] + '~' + paramHash + '~'
+
             if (value._deleted && !value._tombstone){
               key += 'd~' + alphaKey(value.deleted_at || Date.now(), 8) + '~'
             } else {
               key += 'c~'
             }
+
             key += id
 
             batch.push({key: key, value: value, type: 'put'})
@@ -66,8 +70,8 @@ module.exports = function(db, matchers){
 
   // check for reindex
   matcher.get('matcher-hashes', function(err, value){
-    var currentHashes = Object.keys(matcherHashes).map(function(key){
-      return matcherHashes[key]
+    var currentHashes = Object.keys(indexHashes).map(function(key){
+      return indexHashes[key]
     }).sort()
   
     if (!value || value.join('~') !== currentHashes.join('~')){
@@ -84,27 +88,39 @@ module.exports = function(db, matchers){
     return self
   }
 
-  self.lookupMatcher = function (ref){
-    return matcherLookup[ref]
+  self.lookupMatcher = function ($name){
+    return indexLookup[$name]
   }
 
-  self.createMatchStream = function(matcherRef, opts){
-    if (typeof matcherRef !== 'string') throw new Error('must specify matcherRef')
-    if (!matcherHashes[matcherRef]) throw new Error('cannot find specified matcher')
+  self.createMatchStream = function(matchers, opts){
 
-    opts = opts || {}
-    opts.start = matcherHashes[matcherRef] + '~'
-    opts.start += paramHashForOptions(opts, matcherParams[matcherRef].params) + '~'
-    
-    if (opts.deletedSince){
-      opts.start += 'd~' + alphaKey(opts.deletedSince, 8) + '~'
-      opts.end = opts.start + 'd~~'
-    } else {
-      opts.start += 'c~'
-      opts.end = opts.start + '~'
+    if (!Array.isArray(matchers)){
+      matchers = [matchers]
     }
 
-    return LiveStream(self, opts)
+    // merge streams together
+    return MultiStream(matchers.map(function(matcher){
+
+      if (!matcher.$name) throw new Error('must specify $name')
+      if (!indexHashes[matcher.$name]) throw new Error('cannot find specified index')
+
+      var paramifiedIndex = indexParams[matcher.$name]
+
+      opts = opts || {}
+      opts.start = indexHashes[matcher.$name] + '~'
+      opts.start += hashObjectKeys(matcher, paramifiedIndex.params) + '~'
+      
+      if (opts.deletedSince){
+        opts.start += 'd~' + alphaKey(opts.deletedSince, 8) + '~'
+        opts.end = opts.start + 'd~~'
+      } else {
+        opts.start += 'c~'
+        opts.end = opts.start + '~'
+      }
+
+      return LiveStream(self, opts)
+
+    }))
   }
 
   return self
@@ -114,29 +130,11 @@ function checkMatch(object, ensure){
   return !Object.keys(ensure).length || checkFilter(object, ensure, {match: 'filter'})
 }
 
-function paramHashForObject(object, params){
-  var objectToHash = Object.keys(params).reduce(function(result, key){
+function hashObjectKeys(object, keys){
+  var objectToHash = keys.reduce(function(result, key){
     result[key] = object[key]
     return result
   }, {})
-  return hashObject(objectToHash)
-}
-
-function paramHashForOptions(options, params){
-  var objectToHash = Object.keys(params).reduce(function(result, key){
-    
-    var value = params[key]
-
-    if (options.params && value.$param){
-
-      result[key] = options.params[value.$param]
-    } else if (options.queryHandler && value.$query){
-      result[key] = options.queryHandler(value.$query)
-    }
-
-    return result
-  }, {})
-
   return hashObject(objectToHash)
 }
 
@@ -148,17 +146,18 @@ function parseAlphaKey(string){
   return parseInt(string, 36)
 }
 
-
-function paramify(match){
-  var params = {}
+function paramify(index){
+  var params = []
   var ensure = {}
 
-  Object.keys(match).forEach(function(key){
-    var value = match[key]
-    if (isParam(value)){
-      params[key] = value
-    } else {
-      ensure[key] = value
+  Object.keys(index).forEach(function(key){
+    if (key !== '$name'){
+      var value = index[key]
+      if (isParam(value)){
+        params.push(key)
+      } else {
+        ensure[key] = value
+      }
     }
   })
 
@@ -170,5 +169,5 @@ function paramify(match){
 
 
 function isParam(object){
-  return object instanceof Object && (object.$query || object.$param)
+  return object instanceof Object && object.$index
 }

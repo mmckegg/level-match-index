@@ -1,6 +1,6 @@
 var LevelDB = require('levelup')
 var Sublevel = require('level-sublevel')
-var MatchMap = require('../')
+var MatchIndex = require('../')
 
 var test = require('tap').test
 var rimraf = require('rimraf')
@@ -12,26 +12,22 @@ rimraf(testPath, function(){
     encoding: 'json'
   }))
 
-  var matchers = [
-    { ref: 'post',
-      match: {
-        type: 'post',
-        id: {$param: 'postId'}
-      }
+  var indexes = [
+    { $name: 'one_post',
+      type: 'post',
+      id: {$index: true}
     },
-    { ref: 'post_comment',
-      match: {
-        type: 'comment',
-        postId: {$param: 'postId'}
-      }
+    { $name: 'many_comments',
+      type: 'comment',
+      postId: {$index: true}
     }
   ]
 
-  var matchDb = MatchMap(db, matchers)
+  var matchDb = MatchIndex(db, indexes)
 
   test('items are indexed by param then build simple context', function(t){
 
-    t.plan(3)
+    t.plan(1)
 
     var post = {
       id: 'post-1', // used for matching as specified above
@@ -57,35 +53,31 @@ rimraf(testPath, function(){
 
     setTimeout(function(){
 
-      var context = {currentPage: null, comments: [], postId: 'post-1'}
+      var postId = 'post-1'
+      var result = {currentPage: null, comments: []}
 
-      matchDb.createMatchStream('post', {
-        params: context, 
-        tail: false
-      }).on('data', function(data){
+      matchDb.createMatchStream([
 
-        t.deepEqual(data.value, post)
-        context.currentPage = data.value
+        {$name: 'one_post', id: postId},
+        {$name: 'many_comments', postId: postId}
+
+      ], { tail: false }).on('data', function(data){
+
+        if (data.value.type === 'post'){
+          result.currentPage = data.value
+        } else if (data.value.type === 'comment'){
+          result.comments.push(data.value)
+        }
+
+        console.log(data)
 
       }).on('end', function(){
 
-        matchDb.createMatchStream('post_comment', {
-          params: context, 
-          tail: false
-        }).on('data', function(data){
-
-          t.deepEqual(data.value, comment1)
-          context.comments.push(data.value)
-
-        }).on('end', function(){
-
-          t.deepEqual(context, {
-            currentPage: post,
-            comments: [ comment1 ],
-            postId: 'post-1'
-          })
-
+        t.deepEqual(result, {
+          currentPage: post,
+          comments: [ comment1 ]
         })
+
       })
 
     }, 10)
