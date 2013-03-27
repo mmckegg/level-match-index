@@ -1,6 +1,6 @@
 {
   "name": "level-match-index",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Index and filter your database objects in the way they will be rendered using matchers.",
   "main": "index.js",
   "scripts": {
