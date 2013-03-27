@@ -1,7 +1,7 @@
 {
   "name": "level-match-index",
   "version": "0.1.0",
-  "description": "Index your database objects in the way they will be rendered. Follows the JSON Context matcher pattern. Datasources generated from matchers, then watch for realtime changes.",
+  "description": "Index and filter your database objects in the way they will be rendered using matchers.",
   "main": "index.js",
   "scripts": {
     "test": "tap test/*.js"

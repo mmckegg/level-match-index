@@ -1,7 +1,9 @@
 Match Index for LevelDB
 ===
 
-Index your database objects in the way they will be rendered. Follows the [JSON Context](https://github.com/mmckegg/json-context) [matcher pattern](https://github.com/mmckegg/json-context#matchers) allowing datasources to automatically be generated from matchers, then watch for realtime changes.
+Index and filter your database objects in the way they will be rendered using matchers.
+
+Follows the [JSON Context](https://github.com/mmckegg/json-context) [matcher pattern](https://github.com/mmckegg/json-context#matchers) allowing datasources to automatically be generated from matchers, then watch for realtime changes.
 
 It is used internally by [ContextDB](https://github.com/mmckegg/contextdb) for the matcher indexing.
 
@@ -25,7 +27,7 @@ var db = Sublevel(LevelUp('/tmp/database-name', {
 }))
 ```
 
-Now lets specify some indexes. Decide what attributes you want to query your objects by, and what attributes to filter by.
+Now lets specify some indexes. Decide what attributes you want to query your objects by, and what attributes to filter by. You can use any filter supported by [JSON Filter](https://github.com/mmckegg/json-filter).
 
 ```js
 var indexes = [
@@ -39,7 +41,7 @@ var indexes = [
   }
 ]
 
-var matchDb = MatchIndex(db, matchers)
+var matchDb = MatchIndex(db, indexes)
 ```
 
 Now if we put objects into our `db` instance, they will automatically be indexed based on above.
