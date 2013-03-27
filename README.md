@@ -80,32 +80,34 @@ Time to render our page:
 ```js
 
 function getPageContext(postId, cb){
-  var context = { postId: postId, currentPage: null, comments: [] }
+  var params = { postId: postId }
+  var result = { currentPage: null, comments: [] }
+  
   matchDb.createMatchStream('post', {
-    params: context, 
+    params: params, 
     tail: false
   }).on('data', function(data){
 
-    context.currentPage = data.value
+    result.currentPage = data.value
 
   }).on('end', function(){
 
     matchDb.createMatchStream('post_comment', {
-      params: context, 
+      params: params, 
       tail: false
     }).on('data', function(data){
 
-      context.comments.push(data.value)
+      result.comments.push(data.value)
 
     }).on('end', function(){
-      cb(null, context)
+      cb(null, result)
     })
   })
 }
 
 
-getPageContext('post-1', function(err, data){
-  var html = renderer.render('blog-post', data)
+getPageContext('post-1', function(err, result){
+  var html = renderer.render('blog-post', result)
   req.end(html)
 })
 ```
