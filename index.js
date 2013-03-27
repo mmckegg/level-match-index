@@ -92,7 +92,7 @@ module.exports = function(db, indexes){
     return indexLookup[$name]
   }
 
-  self.createMatchStream = function(matchers, opts){
+  self.createMatchStream = function(matchers, options){
 
     if (!Array.isArray(matchers)){
       matchers = [matchers]
@@ -106,7 +106,7 @@ module.exports = function(db, indexes){
 
       var paramifiedIndex = indexParams[matcher.$name]
 
-      opts = opts || {}
+      opts = mergeClone(options)
       opts.start = indexHashes[matcher.$name] + '~'
       opts.start += hashObjectKeys(matcher, paramifiedIndex.params) + '~'
       
@@ -170,4 +170,17 @@ function paramify(index){
 
 function isParam(object){
   return object instanceof Object && object.$index
+}
+
+function mergeClone(){
+  var result = {}
+  for (var i=0;i<arguments.length;i++){
+    var obj = arguments[i]
+    if (obj){
+      Object.keys(obj).forEach(function(key){
+        result[key] = obj[key]
+      })
+    }
+  }
+  return result
 }
