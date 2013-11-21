@@ -1,7 +1,7 @@
 {
   "name": "level-match-index",
   "version": "0.2.1",
-  "description": "Index and filter your database objects in the way they will be rendered using matchers.",
+  "description": "Create match indexes using json-filter for LevelDB",
   "main": "index.js",
   "scripts": {
     "test": "tap test/*.js"
@@ -12,17 +12,11 @@
   },
   "dependencies": {
     "json-filter": "*",
-    "level-live-stream": "~1.1.2",
-    "level-trigger": "~1.1.0",
     "through": "~2.2.7"
   },
-  "peerDependencies": {
-    "level-sublevel": "~4.0.2",
-    "levelup": "~0.6.2"
-  },
   "devDependencies": {
-    "level-sublevel": "~4.0.2",
-    "levelup": "~0.6.2",
+    "level-sublevel": "*",
+    "level": "*",
     "tap": "*",
     "rimraf": "*"
   },
