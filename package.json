@@ -1,7 +1,7 @@
 {
   "name": "level-match-index",
   "version": "0.2.1",
-  "description": "Create match indexes using json-filter for LevelDB",
+  "description": "Index and filter LevelDB databases and watch for future changes.",
   "main": "index.js",
   "scripts": {
     "test": "tap test/*.js"
@@ -11,14 +11,15 @@
     "url": "https://github.com/mmckegg/level-match-index.git"
   },
   "dependencies": {
-    "json-filter": "*",
-    "through": "~2.2.7"
+    "json-filter": "~0.0",
+    "through": "~2.2",
+    "bytewise": "~0.6.1"
   },
   "devDependencies": {
-    "level-sublevel": "*",
-    "level": "*",
-    "tap": "*",
-    "rimraf": "*"
+    "level-sublevel": "~5.1",
+    "level": "~0.18",
+    "tape": "~2.1",
+    "rimraf": "~2.2"
   },
   "keywords": [
     "realtime",

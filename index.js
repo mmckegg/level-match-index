@@ -7,14 +7,20 @@ module.exports = function(db, options){
   var indexHash = hashObject([options.match, options.index], 'djb2')
   db.matchIndex.add(indexHash, options)
 
-  return function(_arguments){
-    new Index(db, indexHash, Array.prototype.slice.call(arguments, 0), options)
+  var result = function(_arguments){
+    return new Index(db, indexHash, Array.prototype.slice.call(arguments, 0), options)
   }
+
+  result.rebuild = function(cb){
+    db.matchIndex.rebuildIndex(indexHash, cb)
+  }
+
+  return result
 }
 
 function Index(db, indexHash, args, options){
+  this.db = db
   this.options = options
-  this.db = options.db
   this.single = options.single
   this.query = hasQuery(args)
   this.args = args
@@ -22,7 +28,7 @@ function Index(db, indexHash, args, options){
 }
 
 Index.prototype.read = function(opts){
-  return this.db.matchIndex.read(this.indexHash, opts)
+  return this.db.matchIndex.read(this.indexHash, this.args, opts)
 }
 
 Index.prototype.watch = function(opts, cb){
@@ -30,5 +36,35 @@ Index.prototype.watch = function(opts, cb){
 }
 
 Index.prototype.getMatcher = function(options){
-  //TODO
+  var matcher = {}
+  if (this.single){
+    matcher.item = options.key
+  } else  {
+    matcher.item = options.key + '[id={.id}]'
+    matcher.collection = options.key
+    matcher.match = {}
+  }
+
+  matcher.match = {}
+  var match = this.options.match || {}
+  var index = this.options.index || []
+
+  for (var key in match){
+    if (key in match){
+      matcher.match[key] = match[key]
+    }
+  }
+  for (var i=0;i<index.length;i++){
+    matcher.match[index[i]] = this.args[i]
+  }
+
+  return matcher
+}
+
+function hasQuery(args){
+  for (var i=0;i<args.length;i++){
+    if (args[i] && args[i].$query){
+      return true
+    }
+  }
 }
