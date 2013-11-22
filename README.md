@@ -137,7 +137,9 @@ views.post(post1.id).read().on('data', function(data){
 
 function getComments(){
   // specify a value to extract as query and specify where to get it from as read option
-  views.comments({ $query: 'post.id' }).read({ data: result }).on('data', function(data){
+  views.comments({ $query: 'post.id' }).read({ 
+    data: result 
+  }).on('data', function(data){
     result.comments.push(data.value)
   }).on('end', finish)
 }
