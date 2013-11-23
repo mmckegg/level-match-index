@@ -1,6 +1,6 @@
 {
   "name": "level-match-index",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Index and filter LevelDB databases and watch for future changes.",
   "main": "index.js",
   "scripts": {
