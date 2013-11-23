@@ -23,7 +23,12 @@ var views = {
     single: true
   }),
 
-  comments: Index(db, {
+  postsByTag: Index(db, {
+    match: { type: 'post' },
+    index: [ {many: 'tags'} ] // index each tag in array seperately
+  }),
+
+  commentsByPost: Index(db, {
     match: { type: 'comment' },
     index: [ 'postId' ]
   })
@@ -39,6 +44,7 @@ var post1 = {
   id: 'post-1', // used for matching as specified above
   type: 'post', //
   title: 'Typical Blog Post Example',
+  tags: [ 'test post', 'long winded' ],
   body: 'etc...',
   date: Date.now()
 }
@@ -47,6 +53,7 @@ var post2 = {
   id: 'post-2',
   type: 'post',
   title: 'Typical Blog Post Example',
+  tags: [ 'test post', 'exciting' ],
   body: 'etc...',
   date: Date.now()
 }
@@ -83,12 +90,11 @@ Now query the views:
 var result = {post: null, comments: []}
 
 views.post(post1.id).read().on('data', function(data){
-  console.log(data)
   result.post = data.value
 }).on('end', getComments)
 
 function getComments(){
-  views.comments(post1.id).read().on('data', function(data){
+  views.commentsByPost(post1.id).read().on('data', function(data){
     result.comments.push(data.value)
   }).on('end', finish)
 }
@@ -98,6 +104,19 @@ function finish(){
     post: post1,
     comments: [ comment1, comment2 ]
   })
+}
+```
+
+Or by tags: 
+
+```js
+var posts = []
+views.postsByTag('long winded').read().on('data', function(data){
+  tags.push(data.value)
+}).on('end', finish)
+
+function finish(){
+  t.deepEqual(posts, [ post1 ])
 }
 ```
 
@@ -113,7 +132,7 @@ var comment3 = {
   date: Date.now()
 }
 
-var remove = views.comments(post1.id).watch(function(ch){
+var remove = views.commentsByPost(post1.id).watch(function(ch){
   // function is called with each change
   t.deepEqual(ch.value, comment3)
 })
@@ -137,7 +156,7 @@ views.post(post1.id).read().on('data', function(data){
 
 function getComments(){
   // specify a value to extract as query and specify where to get it from as read option
-  views.comments({ $query: 'post.id' }).read({ 
+  views.commentsByPost({ $query: 'post.id' }).read({ 
     data: result 
   }).on('data', function(data){
     result.comments.push(data.value)

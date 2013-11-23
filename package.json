@@ -22,10 +22,9 @@
     "rimraf": "~2.2"
   },
   "keywords": [
-    "realtime",
-    "templates",
     "data binding",
     "json",
+    "index",
     "filter",
     "match",
     "leveldb",
